@@ -1,10 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-
+require("./config/index.js");
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 9000;
 
+const UserModel = require("./models/user.js");
 app.use(cors());
 app.use(express.json());
 
@@ -23,46 +24,37 @@ const users = [
   },
 ];
 
-app.get("/", function (req, res) {
-  res.json(users);
+app.get("/", async function (req, res) {
+  const userData = await UserModel.find({});
+  res.json(userData);
 });
 
-app.get("/:id", function (req, res) {
+app.get("/:id", async function (req, res) {
   const { id } = req.params;
-  res.json(
-    users.filter(function (user) {
-      return user.id === +id;
-    })
-  );
+  const user = await UserModel.findById(id);
+  res.json(user);
 });
 
-app.post("/", function (req, res) {
-  users.push({ id: users.length + 1, ...req.body });
-  res.json({ code: "200", message: "success", data: users });
+app.post("/", async function (req, res) {
+  const { name } = req.body;
+  const newUser = new UserModel({ name });
+  const resp = await newUser.save();
+  res.json(resp);
 });
 
-app.put("/:id", function (req, res) {
+app.put("/:id", async function (req, res) {
   const { id } = req.params;
   const { name } = req.body;
-  const index = users.findIndex(function(user){
-    return user.id === +id
-  })
-  if(index > -1) {
-    users[index] = {
-        ...users[index],
-        name
-    }
-  }
-  res.json(users);
+  const userToUpdate = await UserModel.findById(id);
+  userToUpdate.name = name;
+  const updatedUser = await userToUpdate.save();
+  res.json(updatedUser);
 });
 
-app.delete("/:id", function (req, res) {
-    const { id } = req.params;
-    const index = users.findIndex(function(user){
-        return user.id === +id
-      })
-    users.splice(index,1)
-  res.json(users);
+app.delete("/:id", async function (req, res) {
+  const { id } = req.params;
+  const deletedUser = await UserModel.findByIdAndDelete(id);
+  res.json({ message: `${deletedUser.name} deleted successfully` });
 });
 
 app.listen(PORT, function () {
